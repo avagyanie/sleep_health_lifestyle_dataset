@@ -1,6 +1,7 @@
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
+import plotly.express as px
 
 
 st.markdown(
@@ -273,3 +274,21 @@ ax2.set_title("Average Stress Level by Occupation")
 st.pyplot(fig2)
 
 st.divider()
+
+st.subheader("Relationship between Stress Level and Quality of Sleep")
+
+fig = px.scatter(
+    df,
+    x='Stress Level',
+    y='Quality of Sleep',
+    color='Gender',
+    title='Stress Level vs. Quality of Sleep',
+    opacity=0.7,
+    hover_data=['Occupation'],
+    color_discrete_map={
+        'Male': 'darkblue',
+        'Female': 'pink'
+    }
+)
+
+st.plotly_chart(fig)
