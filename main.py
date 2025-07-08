@@ -2,282 +2,147 @@ import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
 import plotly.express as px
+from matplotlib import cm
 
-
-st.markdown(
-    """
-    <style>
-    /* Slider track and thumb */
-    .stSlider > div > div > div > div[role="slider"] {
-        background-color: #4CAF50 !important;  /* green thumb */
-    }
-    .stSlider > div > div > div > div[role="presentation"] {
-        background-color: #A5D6A7 !important;  /* lighter green track */
-    }
-
-    /* Radio buttons selected label text color */
-    div[role="radiogroup"] label[data-state="checked"] > div {
-        color: #4CAF50 !important;
-        font-weight: bold;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
 
 df = pd.read_csv("assets/sleep_health_and_lifestyle_dataset.csv")
 
+st.title("🛌 Sleep Health and Lifestyle Dataset")
 
-st.markdown(
-    """
-    <h2 style='text-align: center; 
-               color: #4CAF50; 
-               font-size: 48px; 
-               font-weight: bold;
-               margin-bottom: -25px;
-               text-shadow: 0 0 10px #FFD700, 
-               0 0 20px #FFD700, 
-               0 0 20px #FFC107;'>
-        Sleep Health and Lifestyle Dataset
-    </h2>
-    """,
-    unsafe_allow_html=True
-)
+st.caption("Let's explore the dataset using pandas and Streamlit.")
 
-st.markdown(
-    """
-    <h2 style='text-align: center; 
-               color: black; 
-               font-size: 23px; 
-               margin-top: -25px;
-               font-style: italic;'>
-        Let's get started with pandas in Streamlit!
-    </h2>
-    """,
-    unsafe_allow_html=True
-)
+st.divider()
 
 st.subheader("First 5 Rows")
-st.dataframe(df.head(5))
-
-st.divider()
+st.dataframe(df.head())
 
 st.subheader("Last 5 Rows")
-st.dataframe(df.tail(5))
+st.dataframe(df.tail())
 
 st.divider()
 
-st.markdown(
-    """
-    <h1 style='font-size: 36px;'>
-        First 5 Rows Where Gender is <span style='color: orange;'>Male</span>
-    </h1>
-    """,
-    unsafe_allow_html=True
-)
-
+st.subheader("First 5 Rows Where Gender is 🟠 Male")
 filtered_df = df[df['Gender'].str.lower() == 'male']
-st.dataframe(filtered_df.head(5))
-
-genders = df['Gender'].dropna().unique().tolist()
-genders = ['All'] + genders
+st.dataframe(filtered_df.head())
 
 st.divider()
 
+genders = ['All'] + df['Gender'].dropna().unique().tolist()
 selected_gender = st.selectbox("Select Gender", genders)
-
 row_position = st.radio("Show first or last rows?", ['First', 'Last'])
-
-num_rows = st.slider("Number of rows to show", min_value=1, max_value=20, value=5)
+num_rows = st.slider("Number of rows to show", 1, 20, 5)
 
 if selected_gender != 'All':
     filtered_df = df[df['Gender'].str.lower() == selected_gender.lower()]
 else:
     filtered_df = df
 
-if row_position == 'First':
-    display_df = filtered_df.head(num_rows)
-else:
-    display_df = filtered_df.tail(num_rows)
-
-st.divider()
-
-st.subheader(f"Showing {row_position.lower()} {num_rows} rows for gender: {selected_gender}")
+display_df = filtered_df.head(num_rows) if row_position == 'First' else filtered_df.tail(num_rows)
+st.subheader(f"{row_position} {num_rows} rows for gender: {selected_gender}")
 st.dataframe(display_df)
 
 st.divider()
 
 st.subheader("People Who Sleep Better (Highest Quality of Sleep)")
-
-if filtered_df.empty:
-    st.write("No data available for the selected filters.")
-else:
+if not filtered_df.empty:
     max_quality = filtered_df['Quality of Sleep'].max()
     best_sleepers = filtered_df[filtered_df['Quality of Sleep'] == max_quality]
-
     st.write(f"Highest Quality of Sleep: {max_quality}")
     st.dataframe(best_sleepers[['Person ID', 'Gender', 'Age', 'Occupation', 'Sleep Duration', 'Quality of Sleep']])
+else:
+    st.info("No data available for the selected filters.")
 
 st.divider()
 
 st.subheader("Sleep Quality Analysis by Gender")
-
-sleep_data = df[['Gender', 'Quality of Sleep', 'Sleep Duration']].dropna()
-
-sleep_summary = sleep_data.groupby('Gender').agg({
-    'Quality of Sleep': 'mean',
-    'Sleep Duration': 'mean'
-}).reset_index()
-
-sleep_summary['Quality of Sleep'] = sleep_summary['Quality of Sleep'].round(2)
-sleep_summary['Sleep Duration'] = sleep_summary['Sleep Duration'].round(2)
-
+sleep_summary = df.groupby('Gender')[['Quality of Sleep', 'Sleep Duration']].mean().round(2).reset_index()
 st.dataframe(sleep_summary)
 
 best_quality = sleep_summary.loc[sleep_summary['Quality of Sleep'].idxmax()]
-st.write(f"🛌 The gender with better average sleep quality is **{best_quality['Gender']}** with a score of {best_quality['Quality of Sleep']}.")
-
 best_duration = sleep_summary.loc[sleep_summary['Sleep Duration'].idxmax()]
-st.write(f"⏰ The gender with longer average sleep duration is **{best_duration['Gender']}** with {best_duration['Sleep Duration']} hours on average.")
+st.success(f"🛌 Best sleep quality: {best_quality['Gender']} — {best_quality['Quality of Sleep']}")
+st.info(f"⏰ Longest sleep duration: {best_duration['Gender']} — {best_duration['Sleep Duration']} hrs")
 
 st.divider()
 
 st.subheader("Sleep Quality Analysis by Occupation")
+occupation_summary = df.groupby('Occupation')[['Quality of Sleep', 'Sleep Duration']].mean().round(2).reset_index()
+st.dataframe(occupation_summary)
 
-sleep_occupation_data = df[['Occupation', 'Quality of Sleep', 'Sleep Duration']].dropna()
-
-sleep_occupation_summary = sleep_occupation_data.groupby('Occupation').agg({
-    'Quality of Sleep': 'mean',
-    'Sleep Duration': 'mean'
-}).reset_index()
-
-sleep_occupation_summary['Quality of Sleep'] = sleep_occupation_summary['Quality of Sleep'].round(2)
-sleep_occupation_summary['Sleep Duration'] = sleep_occupation_summary['Sleep Duration'].round(2)
-
-st.dataframe(sleep_occupation_summary)
-
-best_quality_occupation = sleep_occupation_summary.loc[sleep_occupation_summary['Quality of Sleep'].idxmax()]
-st.write(f"🛌 The occupation with the best average sleep quality is **{best_quality_occupation['Occupation']}** with a score of {best_quality_occupation['Quality of Sleep']}.")
-
-best_duration_occupation = sleep_occupation_summary.loc[sleep_occupation_summary['Sleep Duration'].idxmax()]
-st.write(f"⏰ The occupation with the longest average sleep duration is **{best_duration_occupation['Occupation']}** with {best_duration_occupation['Sleep Duration']} hours on average.")
+best_occ = occupation_summary.loc[occupation_summary['Quality of Sleep'].idxmax()]
+longest_sleep_occ = occupation_summary.loc[occupation_summary['Sleep Duration'].idxmax()]
+st.success(f"🛌 Best average sleep quality: {best_occ['Occupation']} — {best_occ['Quality of Sleep']}")
+st.info(f"⏰ Longest average sleep duration: {longest_sleep_occ['Occupation']} — {longest_sleep_occ['Sleep Duration']} hrs")
 
 st.divider()
 
-st.subheader("Physical Activity Level Analysis by Gender")
-
-pa_gender_data = df[['Gender', 'Physical Activity Level']].dropna()
-
-pa_gender_summary = pa_gender_data.groupby('Gender')['Physical Activity Level'].mean().reset_index()
-
-pa_gender_summary['Physical Activity Level'] = pa_gender_summary['Physical Activity Level'].round(2)
-
-st.dataframe(pa_gender_summary)
-
-best_pa_gender = pa_gender_summary.loc[pa_gender_summary['Physical Activity Level'].idxmax()]
-st.write(f"🏃‍♂️ The gender with the highest average physical activity level is **{best_pa_gender['Gender']}** with a level of {best_pa_gender['Physical Activity Level']}.")
+st.subheader("Physical Activity Level by Gender")
+pa_gender = df.groupby('Gender')['Physical Activity Level'].mean().round(2).reset_index()
+st.dataframe(pa_gender)
+best_pa_gender = pa_gender.loc[pa_gender['Physical Activity Level'].idxmax()]
+st.success(f"🏃‍♂️ Most active gender: {best_pa_gender['Gender']} — {best_pa_gender['Physical Activity Level']}")
 
 st.divider()
 
-st.subheader("Physical Activity Level Analysis by Occupation")
-
-pa_occupation_data = df[['Occupation', 'Physical Activity Level']].dropna()
-
-pa_occupation_summary = pa_occupation_data.groupby('Occupation')['Physical Activity Level'].mean().reset_index()
-
-pa_occupation_summary['Physical Activity Level'] = pa_occupation_summary['Physical Activity Level'].round(2)
-
-st.dataframe(pa_occupation_summary)
-
-best_pa_occupation = pa_occupation_summary.loc[pa_occupation_summary['Physical Activity Level'].idxmax()]
-st.write(f"🏃‍♀️ The occupation with the highest average physical activity level is **{best_pa_occupation['Occupation']}** with a level of {best_pa_occupation['Physical Activity Level']}.")
+st.subheader("Physical Activity Level by Occupation")
+pa_occupation = df.groupby('Occupation')['Physical Activity Level'].mean().round(2).reset_index()
+st.dataframe(pa_occupation)
+best_pa_occ = pa_occupation.loc[pa_occupation['Physical Activity Level'].idxmax()]
+st.success(f"🏃‍♀️ Most active occupation: {best_pa_occ['Occupation']} — {best_pa_occ['Physical Activity Level']}")
 
 st.divider()
 
-st.subheader("Stress Level Analysis by Gender")
+st.subheader("Stress Level by Gender")
+stress_gender = df.groupby('Gender')['Stress Level'].mean().round(2).reset_index()
+st.dataframe(stress_gender)
 
-stress_gender_data = df[['Gender', 'Stress Level']].dropna()
-
-stress_gender_summary = stress_gender_data.groupby('Gender')['Stress Level'].mean().reset_index()
-
-stress_gender_summary['Stress Level'] = stress_gender_summary['Stress Level'].round(2)
-
-st.dataframe(stress_gender_summary)
-
-most_stressed_gender = stress_gender_summary.loc[stress_gender_summary['Stress Level'].idxmax()]
-least_stressed_gender = stress_gender_summary.loc[stress_gender_summary['Stress Level'].idxmin()]
-
-st.write(f"😟 The most stressed gender is **{most_stressed_gender['Gender']}** with an average level of {most_stressed_gender['Stress Level']}.")
-st.write(f"😊 The least stressed gender is **{least_stressed_gender['Gender']}** with an average level of {least_stressed_gender['Stress Level']}.")
+most_stressed_gender = stress_gender.loc[stress_gender['Stress Level'].idxmax()]
+least_stressed_gender = stress_gender.loc[stress_gender['Stress Level'].idxmin()]
+st.warning(f"😟 Most stressed: {most_stressed_gender['Gender']} — {most_stressed_gender['Stress Level']}")
+st.success(f"😊 Least stressed: {least_stressed_gender['Gender']} — {least_stressed_gender['Stress Level']}")
 
 st.divider()
 
-st.subheader("Stress Level Analysis by Occupation")
+st.subheader("Stress Level by Occupation")
+stress_occupation = df.groupby('Occupation')['Stress Level'].mean().round(2).reset_index()
+st.dataframe(stress_occupation)
 
-stress_occupation_data = df[['Occupation', 'Stress Level']].dropna()
-
-stress_occupation_summary = stress_occupation_data.groupby('Occupation')['Stress Level'].mean().reset_index()
-
-stress_occupation_summary['Stress Level'] = stress_occupation_summary['Stress Level'].round(2)
-
-st.dataframe(stress_occupation_summary)
-
-most_stressed_job = stress_occupation_summary.loc[stress_occupation_summary['Stress Level'].idxmax()]
-least_stressed_job = stress_occupation_summary.loc[stress_occupation_summary['Stress Level'].idxmin()]
-
-st.write(f"💼 The most stressful occupation is **{most_stressed_job['Occupation']}** with an average level of {most_stressed_job['Stress Level']}.")
-st.write(f"🧘 The least stressful occupation is **{least_stressed_job['Occupation']}** with an average level of {least_stressed_job['Stress Level']}.")
+most_stressed_occ = stress_occupation.loc[stress_occupation['Stress Level'].idxmax()]
+least_stressed_occ = stress_occupation.loc[stress_occupation['Stress Level'].idxmin()]
+st.warning(f"💼 Most stressful job: {most_stressed_occ['Occupation']} — {most_stressed_occ['Stress Level']}")
+st.success(f"🧘 Least stressful job: {least_stressed_occ['Occupation']} — {least_stressed_occ['Stress Level']}")
 
 st.divider()
 
 st.subheader("Stress Level by Gender (Bar Chart)")
-
-colors = []
-max_val = stress_gender_summary['Stress Level'].max()
-min_val = stress_gender_summary['Stress Level'].min()
-
-for val in stress_gender_summary['Stress Level']:
-    if val == max_val:
-        colors.append('red')
-    elif val == min_val:
-        colors.append('green')
-    else:
-        colors.append('gray')  # Optional for multiple genders)))
+colors = ['red' if val == stress_gender['Stress Level'].max()
+          else 'green' if val == stress_gender['Stress Level'].min()
+          else 'gray' for val in stress_gender['Stress Level']]
 
 fig1, ax1 = plt.subplots()
-ax1.bar(stress_gender_summary['Gender'], stress_gender_summary['Stress Level'], color=colors)
+ax1.bar(stress_gender['Gender'], stress_gender['Stress Level'], color=colors)
 ax1.set_ylabel("Average Stress Level")
 ax1.set_title("Average Stress Level by Gender")
 st.pyplot(fig1)
 
-
 st.divider()
 
-st.subheader("Stress Level by Occupation (Bar Chart)")
+st.subheader("Stress Level by Occupation (Low ➜ High)")
+sorted_stress_occ = stress_occupation.sort_values('Stress Level').reset_index(drop=True)
 
-colors = []
-max_val_occ = stress_occupation_summary['Stress Level'].max()
-min_val_occ = stress_occupation_summary['Stress Level'].min()
-
-for val in stress_occupation_summary['Stress Level']:
-    if val == max_val_occ:
-        colors.append('red')
-    elif val == min_val_occ:
-        colors.append('green')
-    else:
-        colors.append('gray')
+num_items = len(sorted_stress_occ)
+colors = [cm.get_cmap('RdYlGn_r')(i / (num_items - 1)) for i in range(num_items)]
 
 fig2, ax2 = plt.subplots(figsize=(10, 6))
-ax2.barh(stress_occupation_summary['Occupation'], stress_occupation_summary['Stress Level'], color=colors)
+ax2.barh(sorted_stress_occ['Occupation'], sorted_stress_occ['Stress Level'], color=colors)
 ax2.set_xlabel("Average Stress Level")
-ax2.set_title("Average Stress Level by Occupation")
+ax2.set_title("Stress Level by Occupation (Green ➜ Red)")
 st.pyplot(fig2)
 
 st.divider()
 
-st.subheader("Relationship between Stress Level and Quality of Sleep")
-
-fig = px.scatter(
+st.subheader("Stress vs. Quality of Sleep")
+fig3 = px.scatter(
     df,
     x='Stress Level',
     y='Quality of Sleep',
@@ -290,5 +155,6 @@ fig = px.scatter(
         'Female': 'pink'
     }
 )
+st.plotly_chart(fig3)
 
-st.plotly_chart(fig)
+st.divider()
